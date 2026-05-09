@@ -10,3 +10,5 @@
  * 3 - deleted - object is deleted from the game, will be removed in next tick
  */
 export type TObjectState = 0 | 1 | 2 | 3;
+
+export type TPossibleTypes = Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array;

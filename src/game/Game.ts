@@ -144,9 +144,5 @@ export abstract class Game {
     }
   }
 
-  private clearObjects() {
-    // this.blackHoles.clear();
-    // this.stars.clear();
-    // this.particles.clear();
-  }
+  protected abstract clearObjects(): void;
 }
