@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Black hole</title>
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="46%" r="58%">
+      <stop offset="0%" stop-color="#000008"/>
+      <stop offset="32%" stop-color="#000006"/>
+      <stop offset="40%" stop-color="#2a0a14"/>
+      <stop offset="46%" stop-color="#ff6b2e"/>
+      <stop offset="52%" stop-color="#ffd27a"/>
+      <stop offset="58%" stop-color="#e85a28"/>
+      <stop offset="68%" stop-color="#3d1818" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#06060e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="diskTop" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#fff2d4" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#ff9a4a"/>
+      <stop offset="100%" stop-color="#8b2010" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="diskBottom" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#ff7a32" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#1a080c" stop-opacity="0.35"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="50%" cy="42%" r="50%">
+      <stop offset="0%" stop-color="#000"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.97"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#04040a"/>
+
+  <circle cx="10" cy="12" r="0.55" fill="#d8e8ff" opacity="0.45"/>
+  <circle cx="54" cy="14" r="0.45" fill="#fff" opacity="0.35"/>
+  <circle cx="50" cy="50" r="0.5" fill="#a8c4ff" opacity="0.4"/>
+  <circle cx="18" cy="52" r="0.4" fill="#fff" opacity="0.25"/>
+
+  <!-- Accretion disk (tilted torus: far + near arcs) -->
+  <g transform="translate(32 31)">
+    <ellipse rx="24" ry="7.5" fill="url(#diskBottom)" opacity="0.85" transform="rotate(-12)"/>
+    <ellipse rx="24" ry="7.5" fill="none" stroke="#ffcc88" stroke-width="0.35" opacity="0.25" transform="rotate(-12)"/>
+  </g>
+
+  <circle cx="32" cy="31" r="30" fill="url(#halo)"/>
+
+  <g transform="translate(32 31)">
+    <ellipse rx="24" ry="7.5" fill="url(#diskTop)" transform="rotate(-12)"/>
+  </g>
+
+  <!-- Event horizon + faint photon ring -->
+  <circle cx="32" cy="31" r="11" fill="url(#shadow)"/>
+  <ellipse cx="32" cy="31" rx="12.2" ry="11.4" fill="none" stroke="#ffe8c8" stroke-width="0.45" opacity="0.28"/>
+
+  <circle cx="32" cy="31" r="9.5" fill="#000"/>
+</svg>
