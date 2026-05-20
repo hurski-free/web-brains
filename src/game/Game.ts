@@ -1,79 +1,57 @@
-import type { IEngine } from "./engine/IEngine";
-import { type IVec2 } from "./math";
-import type { IRender } from "./render/IRender";
-
-export type GameState = 'wait_for_start' | 'running' | 'paused';
-
-export interface IGameConfig {
-  engine: IEngine;
-  renderer: IRender;
-}
+import type { IEngine } from "./types/IEngine";
+import type { IFrameView } from "./types/IFrameView";
+import type { IGameSession } from "./types/IGameSession";
+import type { IRender } from "./types/IRender";
+import type { IWorld } from "./types/IWorld";
 
 /**
  * non-optimized game class
  * For SoA just use number for indexes
  */
-export abstract class Game {
-  protected engine: IEngine;
-  protected renderer: IRender;
+export class Game<WorldData = unknown, SessionObject = unknown> {
+  private readonly world: IWorld<WorldData>;
+  private readonly engine: IEngine<WorldData, SessionObject>;
+  private readonly renderer: IRender<WorldData, SessionObject>;
+  private readonly frameView: IFrameView;
+  private readonly gameSession: IGameSession<SessionObject>;
 
   protected animationFrameId: number = 0;
-  protected _gameState: GameState = 'wait_for_start';
-
   protected _prevTimestamp: DOMHighResTimeStamp = 0;
 
-  protected _width: number = 0;
-  protected _height: number = 0;
-
-  protected _halfWidth: number = 0;
-  protected _halfHeight: number = 0;
-
-  protected _camera: IVec2 = { x: 0, y: 0 };
-
-  constructor(cfg: IGameConfig) {
-    this.engine = cfg.engine;
-    this.renderer = cfg.renderer;
-  }
-
-  get width() {
-    return this._width;
-  }
-
-  get height() {
-    return this._height;
-  }
-
-  get halfWidth() {
-    return this._halfWidth;
-  }
-
-  get halfHeight() {
-    return this._halfHeight;
+  constructor(
+    world: IWorld<WorldData>,
+    engine: IEngine<WorldData, SessionObject>,
+    renderer: IRender<WorldData, SessionObject>,
+    frameView: IFrameView,
+    gameSession: IGameSession<SessionObject>
+  ) {
+    this.world = world;
+    this.engine = engine;
+    this.renderer = renderer;
+    this.frameView = frameView;
+    this.gameSession = gameSession;
   }
 
   get gameState() {
-    return this._gameState;
-  }
-
-  get camera() {
-    return this._camera;
+    return this.gameSession.gameState;
   }
 
   start() {
-    if (this._gameState === 'wait_for_start') {
-      this._gameState = 'running';
+    if (this.gameSession.gameState === 'wait_for_start') {
+      this.gameSession.gameState = 'running';
 
-      this._camera.x = -this.halfWidth;
-      this._camera.y = -this.halfHeight;  
+      this.frameView.camera[0] = -this.frameView.halfWidth;
+      this.frameView.camera[1] = -this.frameView.halfHeight;
 
-      this.initStartData();
+      this.engine.generateInitialData(this.world, this.frameView, this.gameSession);
 
-      this.tick(performance.now());
+      this._prevTimestamp = performance.now();
+      this.animationFrameId = requestAnimationFrame((now) => this.tick(now));
     }
   }
 
   tick(now: DOMHighResTimeStamp) {
-    if (this._gameState === 'running') {
+    if (this.gameSession.gameState === 'running') {
       const deltaTime = now - this._prevTimestamp;
       this._prevTimestamp = now;
 
@@ -81,40 +59,37 @@ export abstract class Game {
         // ignore cycle
         this.animationFrameId = requestAnimationFrame((now) => this.tick(now));
       } else {
-        this.engine.process(this);
-        this.renderer.render(this);
+        this.engine.process(this.world, this.frameView, this.gameSession);
+        this.renderer.render(this.world, this.frameView, this.gameSession);
         this.animationFrameId = requestAnimationFrame((now) => this.tick(now));
       }
     }
   }
 
-  /**
-   * Initialize objects specific for game
-   */
-  protected abstract initStartData(): void;
-
   pause() {
-    if (this._gameState === 'running') {
-      this._gameState = 'paused';
+    if (this.gameSession.gameState === 'running') {
+      this.gameSession.gameState = 'paused';
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = 0;
     }
   }
 
   resume() {
-    if (this._gameState === 'paused') {
-      this._gameState = 'running';
-      this.tick(performance.now());
+    if (this.gameSession.gameState === 'paused') {
+      this.gameSession.gameState = 'running';
+
+      this._prevTimestamp = performance.now();
+      this.animationFrameId = requestAnimationFrame((now) => this.tick(now));
     }
   }
 
   stop() {
-    if (this._gameState !== 'wait_for_start') {
-      this._gameState = 'wait_for_start';
+    if (this.gameSession.gameState !== 'wait_for_start') {
+      this.gameSession.gameState = 'wait_for_start';
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = 0;
-      this.clearObjects();
-      this.renderer.render(this);
+      this.world.clear();
+      this.renderer.render(this.world, this.frameView, this.gameSession);
     }
   }
 
@@ -124,25 +99,27 @@ export abstract class Game {
   }
 
   resizeCanvas(width: number, height: number, cameraSet = false) {
-    this._width = width;
-    this._height = height;
-    this._halfWidth = width / 2;
-    this._halfHeight = height / 2;
+    this.frameView.width = width;
+    this.frameView.height = height;
+    this.frameView.halfWidth = width / 2;
+    this.frameView.halfHeight = height / 2;
 
     if (cameraSet) {
-      this._camera.x = -this._halfWidth;
-      this._camera.y = -this._halfHeight;  
+      this.frameView.camera[0] = -this.frameView.halfWidth;
+      this.frameView.camera[1] = -this.frameView.halfHeight;
     }
   }
 
   cameraMove(deltaX: number, deltaY: number) {
-    this._camera.x -= deltaX;
-    this._camera.y -= deltaY;
+    this.frameView.camera[0] -= deltaX;
+    this.frameView.camera[1] -= deltaY;
 
-    if (this.gameState === 'paused') {
-      this.renderer.render(this);
+    if (this.gameSession.gameState === 'paused') {
+      this.renderer.render(this.world, this.frameView, this.gameSession);
     }
   }
 
-  protected abstract clearObjects(): void;
+  freeMemory() {
+    this.world.freeMemory();
+  }
 }

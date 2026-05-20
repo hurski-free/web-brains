@@ -1,5 +1,5 @@
 import { getBytesPerArrayType } from "./object.service";
-import type { TPossibleTypes } from "./object.types";
+import { OBJECT_STATE_DELETED, OBJECT_STATE_FREE, type TPossibleTypes } from "./object.types";
 
 interface IBufferConstructor<T extends TPossibleTypes> {
   /**
@@ -224,7 +224,7 @@ export class BufferSoAPool {
     let activeCount = this._activeCount;
   
     while (i < activeCount) {
-      if (this._states[i] === 3) {
+      if (this._states[i] === OBJECT_STATE_DELETED) {
         const lastIdx = activeCount - 1;
   
         if (i !== lastIdx) {
@@ -243,7 +243,7 @@ export class BufferSoAPool {
           this._states[i] = this._states[lastIdx];
         }
   
-        this._states[lastIdx] = 0;
+        this._states[lastIdx] = OBJECT_STATE_FREE;
         activeCount--;
       } else {
         i++;
@@ -255,7 +255,7 @@ export class BufferSoAPool {
 
   clearObjects() {
     for (let i = 0; i < this._activeCount; i++) {
-      this._states[i] = 0;
+      this._states[i] = OBJECT_STATE_FREE;
     }
 
     this._activeCount = 0;

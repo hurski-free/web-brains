@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 
-import type { Game } from '../game/Game'
-import { EaterGame } from '../games/eater/EaterGame';
-import { EaterEngine } from '../games/eater/EaterEngine';
-import { EaterRender } from '../games/eater/EaterRender';
+import { createEaterGame } from '../games/eater/fabric';
+import type { Game } from '../game/Game';
 
 const props = withDefaults(
   defineProps<{
@@ -12,15 +10,17 @@ const props = withDefaults(
     game: 'eater'
   }>(),
   { autoStart: true },
-)
+);
 
 const emit = defineEmits<{
   leave: []
-}>()
+}>();
 
-const rootRef = ref<HTMLDivElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const gameRef = ref<Game | null>(null)
+const rootRef = ref<HTMLDivElement | null>(null);
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const gameRef = ref<Game<unknown, unknown> | null>(null);
+
+const isStarted = ref(false);
 
 const componentName = computed(() => {
   switch (props.game) {
@@ -42,7 +42,7 @@ function applyCanvasSize() {
   if (!root || !canvas) return
 
   const w = root.clientWidth
-  const h = root.clientHeight
+  const h = root.clientHeight - 8
   if (w < 1 || h < 1) return
 
   canvas.width = w
@@ -56,7 +56,14 @@ function applyCanvasSize() {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
   }
 
-  // gameRef.value?.resizeCanvas(w, h)
+  gameRef.value?.resizeCanvas(w, h)
+
+  if (props.autoStart) {
+    if (!isStarted.value) {
+      gameRef.value?.start()
+      isStarted.value = true
+    }
+  }
 }
 
 function initGame() {
@@ -68,20 +75,8 @@ function initGame() {
 
   gameRef.value?.stop()
   
-  const game = new EaterGame({
-    ctx,
-    engine: new EaterEngine(),
-    renderer: new EaterRender(ctx),
-  });
-
-  setTimeout(() => {
-    gameRef.value = game
-    game.resizeCanvas(canvas.width, canvas.height, true)
-
-    if (props.autoStart) {
-      game.start()
-    }
-  }, 100)
+  const game = createEaterGame(ctx);
+  gameRef.value = game
 }
 
 function togglePauseResume() {
@@ -271,9 +266,9 @@ onBeforeUnmount(() => {
 
 .canvas-wrap {
   flex: 1;
-  max-height: calc(100vh - 4rem);
-  min-width: 1024px;
-  min-height: 768px;
+  width: calc(100vw - 20px);
+  margin: 0 auto;
+  height: calc(100vh - 80px);
   border-radius: 0.5rem;
   border: 1px solid var(--border);
   background: var(--input-bg);
@@ -281,6 +276,6 @@ onBeforeUnmount(() => {
 }
 
 .game-canvas {
-  display: block;
+  
 }
 </style>

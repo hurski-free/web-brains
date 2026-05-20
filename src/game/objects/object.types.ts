@@ -11,4 +11,9 @@
  */
 export type TObjectState = 0 | 1 | 2 | 3;
 
+export const OBJECT_STATE_FREE = 0;
+export const OBJECT_STATE_NEW = 1;
+export const OBJECT_STATE_EXIST = 2;
+export const OBJECT_STATE_DELETED = 3;
+
 export type TPossibleTypes = Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array;
