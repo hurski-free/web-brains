@@ -36,6 +36,10 @@ export class Game<WorldData = unknown, SessionObject = unknown> {
     return this.gameSession.gameState;
   }
 
+  getWorldObject(): Readonly<WorldData> {
+    return this.world.worldObject;
+  }
+
   start() {
     if (this.gameSession.gameState === 'wait_for_start') {
       this.gameSession.gameState = 'running';
@@ -95,6 +99,19 @@ export class Game<WorldData = unknown, SessionObject = unknown> {
 
   restart() {
     this.stop();
+    const worldWithReset = this.world as { reset?: () => void };
+    worldWithReset.reset?.();
+    this.start();
+  }
+
+  restartWithSavedModel() {
+    this.stop();
+    const worldWithReset = this.world as { resetWithSavedModel?: () => void; reset?: () => void };
+    if (worldWithReset.resetWithSavedModel) {
+      worldWithReset.resetWithSavedModel();
+    } else {
+      worldWithReset.reset?.();
+    }
     this.start();
   }
 

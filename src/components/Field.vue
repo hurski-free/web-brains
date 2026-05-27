@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 
 import { createEaterGame } from '../games/eater/fabric';
 import type { Game } from '../game/Game';
+import type { IEaterWorldData } from '../games/eater/EaterWorld';
 
 const props = withDefaults(
   defineProps<{
@@ -18,9 +19,11 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const gameRef = ref<Game<unknown, unknown> | null>(null);
+const gameRef = ref<Game<IEaterWorldData, unknown> | null>(null);
 
 const isStarted = ref(false);
+const autoRestartEnabled = ref(false);
+const saveModelEnabled = ref(false);
 
 const componentName = computed(() => {
   switch (props.game) {
@@ -35,6 +38,8 @@ let resizeObserver: ResizeObserver | null = null
 let isMouseDragging = false
 let lastMouseClientX = 0
 let lastMouseClientY = 0
+let autoRestartFrameId = 0
+let isAutoRestartLocked = false
 
 function applyCanvasSize() {
   const root = rootRef.value
@@ -102,7 +107,14 @@ function toggleStartStop() {
 }
 
 function restartGame() {
-  gameRef.value?.restart()
+  const game = gameRef.value
+  if (!game) return
+
+  if (saveModelEnabled.value) {
+    game.restartWithSavedModel()
+  } else {
+    game.restart()
+  }
 }
 
 function onKeyDown(event: KeyboardEvent) {
@@ -154,8 +166,30 @@ function teardownGame() {
   // glRef = null
 }
 
+function monitorAutoRestart() {
+  const game = gameRef.value
+  if (!game || game.gameState !== 'running' || !autoRestartEnabled.value) {
+    isAutoRestartLocked = false
+    autoRestartFrameId = requestAnimationFrame(monitorAutoRestart)
+    return
+  }
+
+  const health = game.getWorldObject().organism.getHealth()
+  if (health <= 0) {
+    if (!isAutoRestartLocked) {
+      isAutoRestartLocked = true
+      restartGame()
+    }
+  } else {
+    isAutoRestartLocked = false
+  }
+
+  autoRestartFrameId = requestAnimationFrame(monitorAutoRestart)
+}
+
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
+  autoRestartFrameId = requestAnimationFrame(monitorAutoRestart)
 
   nextTick(() => {
     resizeObserver = new ResizeObserver(() => {
@@ -172,6 +206,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  cancelAnimationFrame(autoRestartFrameId)
   resizeObserver?.disconnect()
   resizeObserver = null
   teardownGame()
@@ -194,6 +229,14 @@ onBeforeUnmount(() => {
       <button type="button" class="toolbar-btn" @click="restartGame">
         Restart
       </button>
+      <label class="toolbar-toggle">
+        <input v-model="saveModelEnabled" type="checkbox" />
+        Save model
+      </label>
+      <label class="toolbar-toggle">
+        <input v-model="autoRestartEnabled" type="checkbox" />
+        Auto-restart
+      </label>
     </header>
     <div
       ref="rootRef"
@@ -264,6 +307,15 @@ onBeforeUnmount(() => {
   color: var(--muted);
 }
 
+.toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  user-select: none;
+}
+
 .canvas-wrap {
   flex: 1;
   width: calc(100vw - 20px);
@@ -275,7 +327,4 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.game-canvas {
-  
-}
 </style>
